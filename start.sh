@@ -19,7 +19,7 @@ DB_NAME="event_ticketing"
 DB_USER="postgres"
 DB_PASSWORD="postgres"
 DB_PORT="5432"
-FASTAPI_HOST="127.0.0.1"
+FASTAPI_HOST="localhost"
 FASTAPI_PORT="8000"
 
 echo -e "${BLUE}============================================================${NC}"
@@ -65,7 +65,6 @@ else
         -e POSTGRES_PASSWORD=${DB_PASSWORD} \
         -e POSTGRES_DB=${DB_NAME} \
         -p ${DB_PORT}:5432 \
-        -v postgres_ticketing_data:/var/lib/postgresql/data \
         postgres:17-alpine
     echo -e "${GREEN}✅ PostgreSQL container created and started${NC}"
 fi

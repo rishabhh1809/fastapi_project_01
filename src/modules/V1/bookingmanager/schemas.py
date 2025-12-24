@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from modules.V1.bookingmanager.models import BookingStatus
@@ -47,8 +47,8 @@ class BookingWithEventResponse(BookingResponse):
     model_config = ConfigDict(from_attributes=True)
 
 
-class BookingListResponse(BaseModel):
-    items: List[BookingResponse]
+class BookinglistResponse(BaseModel):
+    items: list[BookingResponse]
     total: int
     skip: int
     limit: int

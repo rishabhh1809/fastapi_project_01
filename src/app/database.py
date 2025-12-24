@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import AsyncGenerator, Optional, Any, Type, List
+from typing import AsyncGenerator, Optional, Any, Type, Awaitable, TypeVar
 from sqlalchemy import delete as sa_delete
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -56,7 +56,6 @@ async def close_db():
 
 
 def get_session_factory(db_name: Optional[str] = None) -> Callable[[], AsyncSession]:
-    """Get session factory. Extensible for multi-database support."""
     return DBAsyncSession
 
 
@@ -64,7 +63,6 @@ def get_session_factory(db_name: Optional[str] = None) -> Callable[[], AsyncSess
 
 
 async def create(instance: Any, db_name: Optional[str] = None) -> int:
-    """Create a new record and return its ID."""
     session_factory = get_session_factory(db_name)
     async with session_factory() as session:
         try:
@@ -78,7 +76,6 @@ async def create(instance: Any, db_name: Optional[str] = None) -> int:
 
 
 async def update(instance: Any, db_name: Optional[str] = None) -> int:
-    """Update an existing record and return its ID."""
     session_factory = get_session_factory(db_name)
     async with session_factory() as session:
         try:
@@ -111,7 +108,6 @@ async def update_fields(
 
 
 async def delete(instance: Any, db_name: Optional[str] = None) -> None:
-    """Delete a record."""
     session_factory = get_session_factory(db_name)
     async with session_factory() as session:
         try:
@@ -125,7 +121,6 @@ async def delete(instance: Any, db_name: Optional[str] = None) -> None:
 async def delete_by_id(
     model: Type[Any], id: int, db_name: Optional[str] = None
 ) -> None:
-    """Delete a record by ID."""
     session_factory = get_session_factory(db_name)
     async with session_factory() as session:
         try:
@@ -144,8 +139,79 @@ async def fetch_one(query: Select, db_name: Optional[str] = None) -> Optional[An
         return result.scalar_one_or_none()
 
 
-async def fetch_all(query: Select, db_name: Optional[str] = None) -> List[Any]:
+async def fetch_all(query: Select, db_name: Optional[str] = None) -> list[Any]:
     session_factory = get_session_factory(db_name)
     async with session_factory() as session:
         result = await session.execute(query)
         return list(result.scalars().all())
+
+
+async def fetch_scalar(query: Select, db_name: Optional[str] = None) -> Any:
+    """Execute a query and return a scalar value (e.g., for COUNT queries)."""
+    session_factory = get_session_factory(db_name)
+    async with session_factory() as session:
+        result = await session.execute(query)
+        return result.scalar() or 0
+
+
+async def fetch_one_with_lock(
+    query: Select, db_name: Optional[str] = None
+) -> Optional[Any]:
+    """
+    Fetch a single row with FOR UPDATE lock.
+    Note: This starts a new session, so lock is released after return.
+    For proper transactional locking, use execute_transaction.
+    """
+    session_factory = get_session_factory(db_name)
+    async with session_factory() as session:
+        async with session.begin():
+            locked_query = query.with_for_update()
+            result = await session.execute(locked_query)
+            return result.scalar_one_or_none()
+
+
+# ------------------------------------------ Transaction Utilities ------------------------------------------
+
+T = TypeVar("T")
+
+
+async def execute_transaction(
+    operation: Callable[[AsyncSession], Awaitable[T]], db_name: Optional[str] = None
+) -> T:
+    """
+    Execute an operation within a database transaction.
+
+    This function provides a way to execute complex operations that require
+    multiple database operations within a single transaction, including
+    row-level locking with FOR UPDATE.
+
+    Args:
+        operation: An async callable that receives an AsyncSession and returns a result.
+                    The operation should NOT commit or rollback - that's handled here.
+        db_name: Optional database name for multi-db setups.
+
+    Returns:
+        The result of the operation.
+
+    Example:
+        async def my_operation(session: AsyncSession) -> dict:
+            # Lock a row
+            query = select(Event).where(Event.id == 1).with_for_update()
+            result = await session.execute(query)
+            event = result.scalar_one_or_none()
+
+            # Modify and return
+            event.seats -= 1
+            await session.flush()
+            return {"success": True}
+
+        result = await execute_transaction(my_operation)
+    """
+    session_factory = get_session_factory(db_name)
+    async with session_factory() as session:
+        try:
+            async with session.begin():
+                return await operation(session)
+        except Exception:
+            await session.rollback()
+            raise

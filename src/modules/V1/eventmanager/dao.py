@@ -1,12 +1,20 @@
-from typing import Optional, List, Any
-from sqlalchemy import select
+from typing import Optional, Any
+from sqlalchemy import select, func
 
-from app.database import fetch_one, fetch_all, create, update, delete_by_id
+from app.database import (
+    fetch_one,
+    fetch_all,
+    fetch_scalar,
+    create,
+    update,
+    delete_by_id,
+)
 from .models import Event
-from .schemas import EventBase
 
 
 class EventDAO:
+    # -------------------- Read Operations --------------------
+
     @staticmethod
     async def get_by_id(event_id: int) -> Optional[Event]:
         query = select(Event).where(Event.id == event_id)
@@ -18,14 +26,12 @@ class EventDAO:
         return await fetch_one(query)
 
     @staticmethod
-    async def filter(**filters: Any) -> List[Event]:
+    async def filter(**filters: Any) -> list[Event]:
         query = select(Event)
 
-        # Handle pagination
         skip = filters.pop("skip", 0)
         limit = filters.pop("limit", 100)
 
-        # Apply remaining filters
         conditions = []
         for key, value in filters.items():
             if hasattr(Event, key) and value is not None:
@@ -38,36 +44,40 @@ class EventDAO:
         return await fetch_all(query)
 
     @staticmethod
-    async def get_all(skip: int = 0, limit: int = 100) -> List[Event]:
+    async def get_all(skip: int = 0, limit: int = 100) -> list[Event]:
         query = select(Event).offset(skip).limit(limit)
         return await fetch_all(query)
 
     @staticmethod
-    async def get_available(skip: int = 0, limit: int = 100) -> List[Event]:
+    async def get_available(skip: int = 0, limit: int = 100) -> list[Event]:
         query = select(Event).where(Event.available_seats > 0).offset(skip).limit(limit)
         return await fetch_all(query)
 
-    @staticmethod
-    async def create_event(event: EventBase) -> int:
-        event_dict = event.model_dump()
-        # Auto-set available_seats to total_seats on creation
-        if "available_seats" not in event_dict or event_dict["available_seats"] is None:
-            event_dict["available_seats"] = event_dict.get("total_seats", 0)
+    # -------------------- Count Operations --------------------
 
-        model = Event(**event_dict)
+    @staticmethod
+    async def count_all() -> int:
+        query = select(func.count(Event.id))
+        return await fetch_scalar(query)
+
+    @staticmethod
+    async def count_available() -> int:
+        query = select(func.count(Event.id)).where(Event.available_seats > 0)
+        return await fetch_scalar(query)
+
+    # -------------------- Write Operations --------------------
+
+    @staticmethod
+    async def create_event(event_data: dict) -> int:
+        model = Event(**event_data)
         return await create(model)
 
     @staticmethod
-    async def update_event(event: EventBase) -> int:
-        model = Event(**event.model_dump())
+    async def update_event(event_id: int, event_data: dict) -> int:
+        event_data["id"] = event_id
+        model = Event(**event_data)
         return await update(model)
 
     @staticmethod
     async def delete_event(event_id: int) -> None:
         await delete_by_id(Event, id=event_id)
-
-    @staticmethod
-    async def count_events() -> int:
-        query = select(Event)
-        events = await fetch_all(query)
-        return len(events)

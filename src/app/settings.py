@@ -37,7 +37,7 @@ class SecuritySettings(CommonSettings):
     )
 
     jwt_secret: str = Field(
-        default="your-super-secret-key-change-in-production", alias="JWT_SECRET"
+        default="021fe399a9a78b4fda93f1348ef36af7", alias="JWT_SECRET"
     )
     jwt_algorithm: str = Field(default="HS384")
     access_token_expire_minutes: int = Field(

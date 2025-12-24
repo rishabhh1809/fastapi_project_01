@@ -23,33 +23,26 @@ async def booking_controller(request: Request, auth_data: dict) -> ApiResponse:
 
         case _:
             return ApiResponse(
-                content={
-                    "status": "error",
-                    "message": "Method not allowed",
-                    "code": 405,
-                    "data": None,
-                },
+                content=ApiResponse.error(message="Method not allowed", code=405),
                 status_code=405,
             )
 
     if status_code >= 400:
         return ApiResponse(
-            content={
-                "status": "error",
-                "message": result.get("message", message),
-                "code": status_code,
-                "data": None,
-            },
+            content=ApiResponse.error(
+                message=result.get("message", message), code=status_code
+            ),
+            status_code=status_code,
+        )
+
+    if status_code == 201:
+        return ApiResponse(
+            content=ApiResponse.created(data=result, message=message),
             status_code=status_code,
         )
 
     return ApiResponse(
-        content={
-            "status": "success",
-            "message": message,
-            "code": status_code,
-            "data": result,
-        },
+        content=ApiResponse.success(data=result, message=message, code=status_code),
         status_code=status_code,
     )
 
@@ -77,33 +70,20 @@ async def booking_detail_controller(
 
         case _:
             return ApiResponse(
-                content={
-                    "status": "error",
-                    "message": "Method not allowed",
-                    "code": 405,
-                    "data": None,
-                },
+                content=ApiResponse.error(message="Method not allowed", code=405),
                 status_code=405,
             )
 
     if status_code >= 400:
         return ApiResponse(
-            content={
-                "status": "error",
-                "message": result.get("message", "Error"),
-                "code": status_code,
-                "data": None,
-            },
+            content=ApiResponse.error(
+                message=result.get("message", "Error"), code=status_code
+            ),
             status_code=status_code,
         )
 
     return ApiResponse(
-        content={
-            "status": "success",
-            "message": message,
-            "code": status_code,
-            "data": result,
-        },
+        content=ApiResponse.success(data=result, message=message, code=status_code),
         status_code=status_code,
     )
 
@@ -119,22 +99,12 @@ async def admin_bookings_controller(request: Request, auth_data: dict) -> ApiRes
 
         case _:
             return ApiResponse(
-                content={
-                    "status": "error",
-                    "message": "Method not allowed",
-                    "code": 405,
-                    "data": None,
-                },
+                content=ApiResponse.error(message="Method not allowed", code=405),
                 status_code=405,
             )
 
     return ApiResponse(
-        content={
-            "status": "success",
-            "message": message,
-            "code": status_code,
-            "data": result,
-        },
+        content=ApiResponse.success(data=result, message=message, code=status_code),
         status_code=status_code,
     )
 
@@ -153,21 +123,11 @@ async def event_bookings_controller(
 
         case _:
             return ApiResponse(
-                content={
-                    "status": "error",
-                    "message": "Method not allowed",
-                    "code": 405,
-                    "data": None,
-                },
+                content=ApiResponse.error(message="Method not allowed", code=405),
                 status_code=405,
             )
 
     return ApiResponse(
-        content={
-            "status": "success",
-            "message": message,
-            "code": status_code,
-            "data": result,
-        },
+        content=ApiResponse.success(data=result, message=message, code=status_code),
         status_code=status_code,
     )

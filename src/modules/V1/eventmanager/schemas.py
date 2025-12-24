@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -65,8 +65,8 @@ class EventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class EventListResponse(BaseModel):
-    items: List[EventResponse]
+class EventlistResponse(BaseModel):
+    items: list[EventResponse]
     total: int
     skip: int
     limit: int

@@ -1,6 +1,6 @@
 import uuid
 from datetime import timedelta
-from typing import Dict, Optional, Any
+from typing import Optional, Any
 
 import jwt
 from passlib.context import CryptContext
@@ -34,7 +34,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 # ------------------------------------------------------------------
 # 2. Access & Refresh token helpers
 # ------------------------------------------------------------------
-_session_store: Dict[str, Dict] = {}
+_session_store: dict[str, dict] = {}
 
 
 def _create_token(
@@ -42,7 +42,7 @@ def _create_token(
     scope: str,
     session_id: Optional[str] = None,
     expires_delta: timedelta = timedelta(minutes=15),
-    extra: Optional[Dict] = None,
+    extra: Optional[dict] = None,
 ) -> str:
     now = utcnow()
     payload = {
@@ -102,7 +102,7 @@ def revoke_session(session_id: str) -> bool:
 # ------------------------------------------------------------------
 # 3. Token verification
 # ------------------------------------------------------------------
-def _decode(token: str, scope: str) -> Dict:
+def _decode(token: str, scope: str) -> dict:
     try:
         payload = jwt.decode(
             token,
@@ -134,12 +134,12 @@ def _decode(token: str, scope: str) -> Dict:
     return payload
 
 
-async def verify_jwt_token(request: Request) -> Dict:
+async def verify_jwt_token(request: Request) -> dict:
     token = _extract_bearer(request)
     return _decode(token, scope="access")
 
 
-def verify_refresh_token(refresh_token: str) -> Dict:
+def verify_refresh_token(refresh_token: str) -> dict:
     return _decode(refresh_token, scope="refresh")
 
 
@@ -163,7 +163,7 @@ security = HTTPBearer()
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     token = credentials.credentials
     payload = _decode(token, scope="access")
 
@@ -184,7 +184,7 @@ async def get_current_user_optional(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(
         HTTPBearer(auto_error=False)
     ),
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     if credentials is None:
         return None
 
@@ -196,8 +196,8 @@ async def get_current_user_optional(
 
 def require_role(required_role: str):
     async def role_checker(
-        current_user: Dict[str, Any] = Depends(get_current_user),
-    ) -> Dict[str, Any]:
+        current_user: dict[str, Any] = Depends(get_current_user),
+    ) -> dict[str, Any]:
         if current_user.get("role") != required_role:
             raise HTTPException(
                 status_code=HTTP_403_FORBIDDEN,

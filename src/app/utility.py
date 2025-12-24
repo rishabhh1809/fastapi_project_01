@@ -4,7 +4,7 @@ import orjson
 import asyncio
 import traceback
 from datetime import datetime, timezone
-from typing import Optional, Any, Union, Generic, TypeVar, Dict, List
+from typing import Optional, Any, Union, Generic, TypeVar
 from fastapi import Request
 from fastapi.responses import Response
 
@@ -31,50 +31,20 @@ class ApiResponse(Response, Generic[T]):
     @staticmethod
     def success(
         data: Any = None, message: str = "Success", code: int = 200
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return {"code": code, "message": message, "status": "success", "data": data}
 
     @staticmethod
     def error(
         message: str = "An error occurred", code: int = 400, data: Any = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return {"code": code, "message": message, "status": "error", "data": data}
 
     @staticmethod
     def created(
         data: Any = None, message: str = "Resource created successfully"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         return ApiResponse.success(data=data, message=message, code=201)
-
-    @staticmethod
-    def not_found(
-        message: str = "Resource not found", data: Any = None
-    ) -> Dict[str, Any]:
-        return ApiResponse.error(message=message, code=404, data=data)
-
-    @staticmethod
-    def unauthorized(
-        message: str = "Unauthorized access", data: Any = None
-    ) -> Dict[str, Any]:
-        return ApiResponse.error(message=message, code=401, data=data)
-
-    @staticmethod
-    def forbidden(
-        message: str = "Access forbidden", data: Any = None
-    ) -> Dict[str, Any]:
-        return ApiResponse.error(message=message, code=403, data=data)
-
-    @staticmethod
-    def conflict(
-        message: str = "Resource conflict", data: Any = None
-    ) -> Dict[str, Any]:
-        return ApiResponse.error(message=message, code=409, data=data)
-
-    @staticmethod
-    def internal_error(
-        message: str = "Internal server error", data: Any = None
-    ) -> Dict[str, Any]:
-        return ApiResponse.error(message=message, code=500, data=data)
 
 
 async def exception_handler(
@@ -122,7 +92,7 @@ async def exception_handler(
     return tb_message
 
 
-async def get_request_data(content_type: str, request: Request) -> Dict[str, Any]:
+async def get_request_data(content_type: str, request: Request) -> dict[str, Any]:
     """
     Extract request data from different sources based on content type.
     Handles JSON body, form data, and query parameters.
@@ -135,7 +105,7 @@ async def get_request_data(content_type: str, request: Request) -> Dict[str, Any
         Dictionary containing the request data
     """
     if request.method in ["GET", "DELETE"]:
-        data: Dict[str, Any] = dict(request.query_params)
+        data: dict[str, Any] = dict(request.query_params)
         if "id" in data:
             try:
                 data["id"] = int(data["id"])
@@ -152,22 +122,20 @@ async def get_request_data(content_type: str, request: Request) -> Dict[str, Any
     raise ValueError(f"Unsupported Content-Type: {content_type}")
 
 
-def convert_model_to_dict(model_instance: Any) -> Dict[str, Any]:
+def convert_model_to_dict(model_instance: Any) -> dict[str, Any]:
     if model_instance is None:
         return {}
 
     result = {}
     for column in model_instance.__table__.columns:
         value = getattr(model_instance, column.name)
-        # Convert datetime objects to ISO format strings
         if hasattr(value, "isoformat"):
             value = value.isoformat()
         result[column.name] = value
     return result
 
 
-def convert_models_to_list(model_instances: List[Any]) -> List[Dict[str, Any]]:
-    """Convert a list of SQLAlchemy model instances to a list of dictionaries."""
+def convert_models_to_List(model_instances: list[Any]) -> list[dict[str, Any]]:
     return [convert_model_to_dict(instance) for instance in model_instances]
 
 

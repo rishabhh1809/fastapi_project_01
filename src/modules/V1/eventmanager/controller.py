@@ -35,33 +35,26 @@ async def event_controller(
 
         case _:
             return ApiResponse(
-                content={
-                    "status": "error",
-                    "message": "Method not allowed",
-                    "code": 405,
-                    "data": None,
-                },
+                content=ApiResponse.error(message="Method not allowed", code=405),
                 status_code=405,
             )
 
     if status_code >= 400:
         return ApiResponse(
-            content={
-                "status": "error",
-                "message": result.get("message", message),
-                "code": status_code,
-                "data": None,
-            },
+            content=ApiResponse.error(
+                message=result.get("message", message), code=status_code
+            ),
+            status_code=status_code,
+        )
+
+    if status_code == 201:
+        return ApiResponse(
+            content=ApiResponse.created(data=result, message=message),
             status_code=status_code,
         )
 
     return ApiResponse(
-        content={
-            "status": "success",
-            "message": message,
-            "code": status_code,
-            "data": result,
-        },
+        content=ApiResponse.success(data=result, message=message, code=status_code),
         status_code=status_code,
     )
 
@@ -99,33 +92,20 @@ async def event_detail_controller(
 
         case _:
             return ApiResponse(
-                content={
-                    "status": "error",
-                    "message": "Method not allowed",
-                    "code": 405,
-                    "data": None,
-                },
+                content=ApiResponse.error(message="Method not allowed", code=405),
                 status_code=405,
             )
 
     if status_code >= 400:
         return ApiResponse(
-            content={
-                "status": "error",
-                "message": result.get("message", "Error"),
-                "code": status_code,
-                "data": None,
-            },
+            content=ApiResponse.error(
+                message=result.get("message", "Error"), code=status_code
+            ),
             status_code=status_code,
         )
 
     return ApiResponse(
-        content={
-            "status": "success",
-            "message": message,
-            "code": status_code,
-            "data": result,
-        },
+        content=ApiResponse.success(data=result, message=message, code=status_code),
         status_code=status_code,
     )
 
@@ -141,21 +121,11 @@ async def available_events_controller(request: Request) -> ApiResponse:
 
         case _:
             return ApiResponse(
-                content={
-                    "status": "error",
-                    "message": "Method not allowed",
-                    "code": 405,
-                    "data": None,
-                },
+                content=ApiResponse.error(message="Method not allowed", code=405),
                 status_code=405,
             )
 
     return ApiResponse(
-        content={
-            "status": "success",
-            "message": message,
-            "code": status_code,
-            "data": result,
-        },
+        content=ApiResponse.success(data=result, message=message, code=status_code),
         status_code=status_code,
     )

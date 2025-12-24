@@ -3,8 +3,9 @@ from .dao import EventDAO
 
 
 class EventService:
+
     @staticmethod
-    async def save(**data):
+    async def save(**data) -> tuple[dict, int]:
         try:
             title = data.get("title")
             if title:
@@ -12,26 +13,33 @@ class EventService:
                 if existing:
                     return {"message": "Event with this title already exists"}, 409
 
+            # Validate and create schema
             event_model = EventBase(**data)
-            event_id = await EventDAO.create_event(event_model)
+            event_dict = event_model.model_dump()
+
+            # Business rule: Auto-set available_seats to total_seats on creation
+            if event_dict.get("available_seats") is None:
+                event_dict["available_seats"] = event_dict.get("total_seats", 0)
+
+            event_id = await EventDAO.create_event(event_dict)
             return {"id": event_id}, 201
         except Exception as e:
             return {"message": str(e)}, 400
 
     @staticmethod
-    async def filter(**filters):
+    async def filter(**filters) -> tuple[dict, int]:
         skip = filters.get("skip", 0)
         limit = filters.get("limit", 100)
 
         events = await EventDAO.filter(**filters)
         events_data = [EventBase.model_validate(e).model_dump() for e in events]
 
-        total = await EventDAO.count_events()
+        total = await EventDAO.count_all()
 
         return {"items": events_data, "total": total, "skip": skip, "limit": limit}, 200
 
     @staticmethod
-    async def get_by_id(**data):
+    async def get_by_id(**data) -> tuple[dict, int]:
         event_id = data.get("id")
         if not event_id:
             return {"message": "Missing 'id' parameter"}, 400
@@ -43,22 +51,24 @@ class EventService:
         return EventBase.model_validate(event).model_dump(), 200
 
     @staticmethod
-    async def get_available(**data):
-        skip = data.get("skip", 0)
-        limit = data.get("limit", 100)
+    async def get_available(**data) -> tuple[dict, int]:
+        skip = int(data.get("skip", 0))
+        limit = int(data.get("limit", 100))
 
-        events = await EventDAO.get_available(skip=int(skip), limit=int(limit))
+        events = await EventDAO.get_available(skip=skip, limit=limit)
         events_data = [EventBase.model_validate(e).model_dump() for e in events]
+
+        total = await EventDAO.count_available()
 
         return {
             "items": events_data,
-            "total": len(events_data),
+            "total": total,
             "skip": skip,
             "limit": limit,
         }, 200
 
     @staticmethod
-    async def update(**data):
+    async def update(**data) -> tuple[dict, int]:
         event_id = data.get("id")
         if not event_id:
             return {"message": "Missing 'id' parameter"}, 400
@@ -74,20 +84,17 @@ class EventService:
             if value is not None and key != "id":
                 existing_data[key] = value
 
-        # If total_seats is updated, adjust available_seats
+        # Business rule: If total_seats is updated, adjust available_seats proportionally
         if "total_seats" in data and data["total_seats"] is not None:
             seat_difference = data["total_seats"] - existing.total_seats
             new_available = existing.available_seats + seat_difference
             existing_data["available_seats"] = max(0, new_available)
 
-        event_model = EventBase(**existing_data)
-        event_model.id = int(event_id)
-
-        updated_id = await EventDAO.update_event(event_model)
+        updated_id = await EventDAO.update_event(int(event_id), existing_data)
         return {"id": updated_id}, 200
 
     @staticmethod
-    async def delete(**data):
+    async def delete(**data) -> tuple[dict, int]:
         event_id = data.get("id")
         if not event_id:
             return {"message": "Missing 'id' parameter"}, 400
